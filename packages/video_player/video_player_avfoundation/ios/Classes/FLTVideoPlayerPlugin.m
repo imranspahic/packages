@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#define SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(v)  ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] != NSOrderedAscending)
+
 #import "FLTVideoPlayerPlugin.h"
 #import "FLTVideoPlayerPlugin_Test.h"
 
@@ -228,6 +230,15 @@ NS_INLINE UIViewController *rootViewController(void) {
   }
   AVURLAsset *urlAsset = [AVURLAsset URLAssetWithURL:url options:options];
   AVPlayerItem *item = [AVPlayerItem playerItemWithAsset:urlAsset];
+    
+    
+    if(SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"10.0")) {
+        NSLog(@"Setting interval to 2 seconds");
+        NSTimeInterval interval = 2; // set to  0 for default duration.
+        item.preferredForwardBufferDuration = interval;
+        [self player].automaticallyWaitsToMinimizeStalling = NO;
+    }
+    
   return [self initWithPlayerItem:item frameUpdater:frameUpdater playerFactory:playerFactory];
 }
 
@@ -265,7 +276,7 @@ NS_INLINE UIViewController *rootViewController(void) {
       }
     }
   };
-
+ 
   _player = [playerFactory playerWithPlayerItem:item];
   _player.actionAtItemEnd = AVPlayerActionAtItemEndNone;
 
@@ -299,6 +310,7 @@ NS_INLINE UIViewController *rootViewController(void) {
         [values addObject:@[ @(start), @(start + FLTCMTimeToMillis(range.duration)) ]];
       }
       _eventSink(@{@"event" : @"bufferingUpdate", @"values" : values});
+       NSLog(@"Buffering values %@", values);
     }
   } else if (context == statusContext) {
     AVPlayerItem *item = (AVPlayerItem *)object;
@@ -418,6 +430,7 @@ NS_INLINE UIViewController *rootViewController(void) {
 }
 
 - (void)play {
+  NSLog(@"play() method called!");
   _isPlaying = YES;
   [self updatePlayingState];
 }
