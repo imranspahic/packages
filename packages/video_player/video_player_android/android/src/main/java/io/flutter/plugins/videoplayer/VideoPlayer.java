@@ -9,18 +9,25 @@ import static com.google.android.exoplayer2.Player.REPEAT_MODE_OFF;
 
 import android.content.Context;
 import android.net.Uri;
+import android.util.Log;
 import android.view.Surface;
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
 import com.google.android.exoplayer2.C;
+import com.google.android.exoplayer2.DefaultLoadControl;
+import com.google.android.exoplayer2.DefaultRenderersFactory;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.Format;
+import com.google.android.exoplayer2.LoadControl;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.PlaybackException;
 import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.Player.Listener;
+import com.google.android.exoplayer2.analytics.DefaultAnalyticsCollector;
 import com.google.android.exoplayer2.audio.AudioAttributes;
+import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory;
+import com.google.android.exoplayer2.source.DefaultMediaSourceFactory;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.ProgressiveMediaSource;
 import com.google.android.exoplayer2.source.dash.DashMediaSource;
@@ -28,9 +35,12 @@ import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource;
 import com.google.android.exoplayer2.source.hls.HlsMediaSource;
 import com.google.android.exoplayer2.source.smoothstreaming.DefaultSsChunkSource;
 import com.google.android.exoplayer2.source.smoothstreaming.SsMediaSource;
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.upstream.DataSource;
+import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
 import com.google.android.exoplayer2.upstream.DefaultDataSource;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
+import com.google.android.exoplayer2.util.Clock;
 import com.google.android.exoplayer2.util.Util;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.view.TextureRegistry;
@@ -76,7 +86,20 @@ final class VideoPlayer {
     this.textureEntry = textureEntry;
     this.options = options;
 
-    ExoPlayer exoPlayer = new ExoPlayer.Builder(context).build();
+    LoadControl loadControl = new DefaultLoadControl.Builder().setBufferDurationsMs(
+            1900, 2000, 1500, 1500
+    ).build();
+
+    ExoPlayer exoPlayer = new ExoPlayer.Builder(context,
+            new DefaultRenderersFactory(context),
+            new DefaultMediaSourceFactory(context, new DefaultExtractorsFactory()),
+            new DefaultTrackSelector(context),
+            loadControl,
+            DefaultBandwidthMeter.getSingletonInstance(context),
+            new DefaultAnalyticsCollector(Clock.DEFAULT)
+            ).build();
+
+
     Uri uri = Uri.parse(dataSource);
 
     buildHttpDataSourceFactory(httpHeaders);
@@ -249,6 +272,7 @@ final class VideoPlayer {
     event.put("event", "bufferingUpdate");
     List<? extends Number> range = Arrays.asList(0, exoPlayer.getBufferedPosition());
     // iOS supports a list of buffered ranges, so here is a list with a single range.
+    Log.i("buffered range",Collections.singletonList(range).toString());
     event.put("values", Collections.singletonList(range));
     eventSink.success(event);
   }
